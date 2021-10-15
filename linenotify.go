@@ -17,7 +17,7 @@ const (
         NOTIFY_HOST             = "https://notify-api.line.me/api/notify"
 )
 
-type client struct {
+type Client struct {
         id              string
         secret          string
         callback        *url.URL
@@ -25,9 +25,9 @@ type client struct {
         done            chan error
 }
 
-func New(id, secret, callback string) (*client, error) {
+func New(id, secret, callback string) (*Client, error) {
         if id == "" || secret == "" {
-                return nil, fmt.Errorf("client id: %s and secret: %s can not be empty", id, secret)
+                return nil, fmt.Errorf("client id and secret can not be empty")
         }
 
         cb, err := url.Parse(callback)
@@ -35,7 +35,7 @@ func New(id, secret, callback string) (*client, error) {
                 return nil, fmt.Errorf("fail to pars callback url with err: %v", err)
         }
 
-        c := &client{
+        c := &Client{
                 id:             id,
                 secret:         secret,
                 callback:       cb,
@@ -46,7 +46,7 @@ func New(id, secret, callback string) (*client, error) {
         return c, nil
 }
 
-func (c *client) Login() (string, error) {
+func (c *Client) Login() (string, error) {
         if err := openbrowser(c.AuthUrl()); err != nil {
                 return "", fmt.Errorf("fail to open browser, %v", err)
         }
@@ -58,7 +58,7 @@ func (c *client) Login() (string, error) {
         return c.token, nil
 }
 
-func (c *client) AuthUrl() string {
+func (c *Client) AuthUrl() string {
         values := url.Values{}
         values.Add("client_id", c.id)
         values.Add("response_type", "code")
@@ -72,10 +72,10 @@ func (c *client) AuthUrl() string {
         return url
 }
 
-func (c *client) makeTokenBody(code string) string {
+func (c *Client) makeTokenBody(code string) string {
         values := url.Values{}
         values.Add("client_id", c.id)
-        values.Add("client_secret", c.secret)
+        values.Add("Client_secret", c.secret)
         values.Add("redirect_uri", c.callback.String())
         values.Add("code", code)
         values.Add("grant_type", "authorization_code")
@@ -84,7 +84,7 @@ func (c *client) makeTokenBody(code string) string {
         return body
 }
 
-func (c *client) GetToken(code string) (string, error) {
+func (c *Client) GetToken(code string) (string, error) {
         body := c.makeTokenBody(code)
         req, _ := http.NewRequest("POST", LINE_TOKEN_PATH, strings.NewReader(body))
         req.Header.Add("Content-type", "application/x-www-form-urlencoded")
@@ -116,7 +116,7 @@ func (c *client) GetToken(code string) (string, error) {
         return buf.Access_token, nil
 }
 
-func (c *client) handler(w http.ResponseWriter, r *http.Request) {
+func (c *Client) handler(w http.ResponseWriter, r *http.Request) {
         code := r.URL.Query().Get("code")
         token, err := c.GetToken(code)
         if err != nil {
@@ -130,7 +130,7 @@ func (c *client) handler(w http.ResponseWriter, r *http.Request) {
         c.done <- nil
 }
 
-func (c *client) waitForCallback() error {
+func (c *Client) waitForCallback() error {
         server := &http.Server{
                 Addr:           c.callback.Host,
                 Handler:        http.HandlerFunc(c.handler),

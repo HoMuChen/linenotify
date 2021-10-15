@@ -10,7 +10,11 @@ import (
 )
 
 
-func (c *client) Send(token, message string) error {
+func (c *Client) Send(token, message string) error {
+        if token == "" || message == "" {
+                return fmt.Errorf("missing token or message")
+        }
+
         req := c.makeNotifyRequest(token, message)
         res, err := http.DefaultClient.Do(req)
         if err != nil {
@@ -37,7 +41,7 @@ func (c *client) Send(token, message string) error {
         return nil
 }
 
-func (c *client) makeNotifyRequest(token, message string) *http.Request {
+func (c *Client) makeNotifyRequest(token, message string) *http.Request {
         values := url.Values{}
         values.Add("message", message)
         body := values.Encode()
